@@ -60,6 +60,7 @@ for year in (2021, 2022, 2023):
     V[year] = {m: train_vintage(m, pd.Timestamp(f'{year}-12-01')) for m in (4, 5)}
     print('vintage', year, flush=True)
 
+VCUT_BY_YEAR = {y: pd.Timestamp(f'{y}-12-01') for y in (2021, 2022, 2023)}
 rows = []
 for t in ORIGINS:
     for j in range(5):
@@ -85,25 +86,32 @@ for t in ORIGINS:
         for i, (_, r) in enumerate(rr.iterrows()):
             u = [c[5:] for c in unitcols if r[c] == 1][0]
             for name in ('rf', 'xgb', 'hybrid'):
-                rows.append((u, t, m, j, name, float(preds[name][i])))
+                # R3-M-19: stamp the provenance of every forecast row so the information
+                # set can be audited row by row rather than inferred from the code
+                rows.append((u, t, m, j, name, float(preds[name][i]),
+                             vy, VCUT_BY_YEAR[vy], m - pd.DateOffset(months=minlag)))
     if t.month == 12: print('origins through', t.date(), flush=True)
 
-ml = pd.DataFrame(rows, columns=['Unit', 'Origin', 'Month', 'h', 'Model', 'Forecast'])
+ml = pd.DataFrame(rows, columns=['Unit', 'Origin', 'Month', 'h', 'Model', 'Forecast',
+                                 'vintage_year', 'training_end', 'feature_max_date'])
 act = panel.stack().rename('Actual').reset_index()
 act.columns = ['Month', 'Unit', 'Actual']
 ml = ml.merge(act, on=['Unit', 'Month'], how='left')
 
-# ---- leakage test: no training observation may be dated at or after the origin ----
-VCUT = {2021: pd.Timestamp('2021-12-01'), 2022: pd.Timestamp('2022-12-01'),
-        2023: pd.Timestamp('2023-12-01')}
-bad = 0
-for t in ORIGINS:
-    vy = min(max(t.year - 1, 2021), 2023)
-    if VCUT[vy] >= t:
-        bad += 1
-        print('LEAK: origin', t.date(), 'uses vintage', vy, 'cut', VCUT[vy].date())
-assert bad == 0, f'{bad} origins use a vintage trained on data dated at or after the origin'
-print('leakage test passed: max(training date) < origin for all', len(ORIGINS), 'origins')
+# ---- row-level leakage test (R3-M-19) ----
+# Every forecast row must carry a training cut-off and a most-recent-feature date that
+# both precede the origin at which the forecast was issued, and all horizons issued at
+# one origin must share a single vintage.
+bad_train = ml[ml.training_end >= ml.Origin]
+bad_feat = ml[ml.feature_max_date >= ml.Origin]
+assert bad_train.empty, f'{len(bad_train)} rows trained on data dated at or after the origin'
+assert bad_feat.empty, f'{len(bad_feat)} rows use a feature dated at or after the origin'
+mixed = ml.groupby('Origin').vintage_year.nunique()
+assert (mixed == 1).all(), f'origins with more than one vintage: {mixed[mixed > 1].index.tolist()}'
+print('row-level leakage test passed on', len(ml), 'forecast rows;',
+      'max training_end', ml.training_end.max().date(),
+      '| max feature_max_date', ml.feature_max_date.max().date())
+
 old = pd.read_parquet(os.path.join(HERE, 'forecasts.parquet'))
 keep = old[~old.Model.isin(['rf', 'xgb', 'hybrid'])]
 out = pd.concat([keep, ml], ignore_index=True)

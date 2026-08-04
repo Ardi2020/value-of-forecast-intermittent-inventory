@@ -1,0 +1,10 @@
+seed,Model,cost_index
+42,rf,232.7
+42,xgb,103.6
+42,hybrid,218.7
+7,rf,223.6
+7,xgb,103.6
+7,hybrid,218.7
+2026,rf,239.9
+2026,xgb,99.3
+2026,hybrid,218.7

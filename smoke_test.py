@@ -16,6 +16,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 MODULES = ['simcore']
+REALCASE_PREFIX = 'realcase_'
 SCRIPTS = ['00_make_synthetic_data.py', '02_forecasts.py', '03_ml_models.py',
            '04_simulate.py', '05_alignment.py', '06_service_frontier.py',
            '07_bootstrap.py', '08_figures.py', '09_report_numbers.py',
@@ -79,6 +80,17 @@ def check_fixture_and_simulator():
     print(f"ok: simulator runs (cost {out['total_cost']:.0f}, fill {out['fill_rate']:.3f})")
 
 
+def check_namespace_separation():
+    """R3-B-16: no pipeline step may write or delete a released real-case file."""
+    import run_all
+    generated = set(run_all.GENERATED)
+    released = {f for f in os.listdir(HERE) if f.startswith(REALCASE_PREFIX)}
+    clash = generated & released
+    assert not clash, f'pipeline would overwrite released real-case files: {sorted(clash)}'
+    assert not any(g.startswith(REALCASE_PREFIX) for g in generated)
+    print(f'ok: {len(released)} real-case files are outside the pipeline namespace')
+
+
 def check_vintage_rule():
     """The rule itself, without needing the full forecast frame."""
     cutoff = {2021: pd.Timestamp('2021-12-01'), 2022: pd.Timestamp('2022-12-01'),
@@ -94,6 +106,7 @@ if __name__ == '__main__':
     check_syntax()
     check_imports()
     check_declared_dependencies()
+    check_namespace_separation()
     check_vintage_rule()
     check_fixture_and_simulator()
     print('\nsmoke test passed')

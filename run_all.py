@@ -22,6 +22,11 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
+# Nothing this pipeline writes shares a name with a released real-case file: those all
+# carry the realcase_ prefix, and no step here reads, writes or deletes them (R3-B-16).
+# A synthetic run therefore cannot be mistaken for, or overwrite, the confidential-case
+# evidence. The assertion below enforces that at import time.
+
 STEPS = [
     ('00_make_synthetic_data.py', ['unit_demand_monthly.csv', 'mitra_annual.json', 'exog_monthly.csv'], False),
     ('02_forecasts.py',           ['forecasts.parquet'], False),
@@ -40,7 +45,11 @@ STEPS = [
 
 GENERATED = sorted({o for _, outs, _ in STEPS for o in outs} |
                    {'unit_demand_monthly.csv', 'mitra_annual.json', 'exog_monthly.csv',
-                    'forecasts.parquet', 'forecasts_refit.parquet', 'accuracy_calendar.csv'})
+                    'forecasts.parquet', 'forecasts_refit.parquet', 'accuracy_calendar.csv',
+                    'matched_service.csv', 'seed_variability.csv', 'alpha_sensitivity.csv',
+                    'refit_frequency.csv'})
+assert not any(g.startswith('realcase_') for g in GENERATED), \
+    'a pipeline step would overwrite a released real-case file'
 
 
 def sha256(path):
@@ -57,6 +66,9 @@ def main():
                     help='skip the seed, smoothing-constant and refit studies')
     args = ap.parse_args()
 
+    protected = [f for f in os.listdir(HERE) if f.startswith('realcase_')]
+    print(f'{len(protected)} released real-case file(s) are outside the pipeline namespace '
+          f'and will not be touched\n')
     removed = 0
     for rel in GENERATED:
         p = os.path.join(HERE, rel)
@@ -84,7 +96,10 @@ def main():
         p = os.path.join(HERE, rel)
         if os.path.exists(p):
             print(f'  {sha256(p)}  {rel}')
-    print(f'\npipeline completed in {time.time() - t0:.0f}s')
+    still_there = [f for f in protected if os.path.exists(os.path.join(HERE, f))]
+    assert len(still_there) == len(protected), 'a real-case file disappeared during the run'
+    print(f'\nall {len(protected)} real-case files intact')
+    print(f'pipeline completed in {time.time() - t0:.0f}s')
 
 
 if __name__ == '__main__':

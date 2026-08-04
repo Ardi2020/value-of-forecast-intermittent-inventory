@@ -13,8 +13,8 @@ original portfolio size.
 
 Two indices are bootstrapped:
   * the common-z index at the base case (z from a 95% target), and
-  * the matched-achieved-fill index built by service_frontier.py, which is the
-    comparison the cost claim rests on.
+  * the index under a common minimum achieved-fill requirement, built by
+    service_frontier.py, which is the comparison the cost claim rests on.
 
 An interval that spans 100 means the data do not resolve the direction of the
 difference. It is NOT evidence of equivalence; no equivalence margin was specified in
@@ -91,15 +91,15 @@ for m in MODELS:
                  'lo': round(np.percentile(a, 2.5), 1), 'hi': round(np.percentile(a, 97.5), 1),
                  'spans_100': bool(np.percentile(a, 2.5) < 100 < np.percentile(a, 97.5)),
                  'n_boot': NBOOT})
-    rows.append({'Model': m, 'basis': f'matched achieved fill {MATCH_FILL}',
+    rows.append({'Model': m, 'basis': f'minimum fill requirement {MATCH_FILL}',
                  'point': np.nan, 'lo': round(np.percentile(b, 2.5), 1),
                  'hi': round(np.percentile(b, 97.5), 1),
                  'spans_100': bool(np.percentile(b, 2.5) < 100 < np.percentile(b, 97.5)),
                  'n_boot': len(b)})
 out = pd.DataFrame(rows)
 matched_point = pd.read_csv(os.path.join(HERE, 'matched_service.csv'))
-mp = matched_point[matched_point.matched_fill == MATCH_FILL].set_index('Model').cost_index
-out.loc[out.basis.str.startswith('matched'), 'point'] = \
-    out.loc[out.basis.str.startswith('matched'), 'Model'].map(mp).values
+mp = matched_point[matched_point.required_fill == MATCH_FILL].set_index('Model').cost_index
+out.loc[out.basis.str.startswith('minimum'), 'point'] = \
+    out.loc[out.basis.str.startswith('minimum'), 'Model'].map(mp).values
 out.to_csv(os.path.join(HERE, 'bootstrap_intervals.csv'), index=False)
 print(out.assign(Model=out.Model.map(S.NAME)).to_string(index=False))

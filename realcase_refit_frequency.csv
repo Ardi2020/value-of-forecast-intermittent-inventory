@@ -1,0 +1,13 @@
+schedule,term_k,Model,cost_index,agg_fill,cycle_service_mean,MASE_median,MASE5_median,customMAPE_median
+yearly,0.0,rf,232.7,0.998,0.984,0.603,0.392,80.6
+yearly,0.0,xgb,103.6,0.981,0.938,0.537,0.38,90.5
+yearly,0.0,hybrid,218.7,0.992,0.984,0.586,0.377,88.0
+yearly,2.5,rf,233.4,0.998,0.984,0.603,0.392,80.6
+yearly,2.5,xgb,105.0,0.981,0.938,0.537,0.38,90.5
+yearly,2.5,hybrid,214.0,0.992,0.984,0.586,0.377,88.0
+every_origin,0.0,rf,211.4,1.0,0.984,0.744,0.375,83.5
+every_origin,0.0,xgb,109.4,0.992,0.938,0.503,0.353,90.8
+every_origin,0.0,hybrid,207.4,0.997,0.984,0.653,0.363,87.4
+every_origin,2.5,rf,213.6,1.0,0.984,0.744,0.375,83.5
+every_origin,2.5,xgb,114.1,0.992,0.938,0.503,0.353,90.8
+every_origin,2.5,hybrid,202.8,0.997,0.984,0.653,0.363,87.4

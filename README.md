@@ -2,7 +2,7 @@
 
 Reproducible code for the study *"From forecast accuracy to inventory performance: a
 simulation-based value assessment of machine-learning demand forecasts in a
-periodic-review policy for intermittent export demand"* (submitted to *Transactions on
+periodic-review policy for intermittent export demand"* (prepared for submission to *Transactions on
 Computational Modelling and Intelligent Systems*).
 
 The study asks whether better demand forecasts actually produce cheaper inventory
@@ -11,8 +11,8 @@ ex-ante annual plan, naive and exponential smoothing, Croston, SBA, TSB, ARIMA, 
 machine-learning configurations — are each fed through a sequential simulation of the
 company's periodic-review `(R,S)` replenishment policy, with a three-month lead time,
 shipping-lot rounding, and a safety stock calibrated to that method's own realised
-forecast errors. Methods are then compared on inventory cost **at matched achieved
-service**, not on accuracy alone and not at a common service target.
+forecast errors. Methods are then compared on inventory cost **under a common achieved-service
+requirement**, not on accuracy alone and not at a common service target.
 
 ## Running it
 
@@ -45,10 +45,13 @@ about 45 minutes on its own.
 The company's export records are commercially confidential and are **not** redistributed.
 Two different things are provided, and they should not be confused:
 
-* **The `results_*.csv` and supporting CSVs — real.** The aggregate result tables computed from the confidential data.
-  Every table and figure reported in the paper is derived from these files. They contain
-  normalised cost indices, accuracy metrics, achieved service, and rank correlations
-  only; no absolute demand quantity appears in them.
+* **`realcase_*.csv` — real.** The aggregate result tables computed from the confidential
+  data. Every table and figure reported in the paper is derived from these files. They
+  contain normalised cost indices, accuracy metrics, achieved service, and rank
+  correlations only; no absolute demand quantity appears in them. Their SHA-256 hashes
+  and provenance are recorded in `MANIFEST.md`. **No pipeline step writes, reads or
+  deletes anything in this namespace**, so a synthetic run cannot overwrite them or be
+  mistaken for them; `smoke_test.py` asserts that separation on every push.
 * **The pipeline — synthetic.** `00_make_synthetic_data.py` generates a panel with the
   same structure as the case data: 18 grade-level demand units over 55 monthly periods
   (June 2020 – December 2024), spanning the same intermittency range, with lot-sized
@@ -66,26 +69,34 @@ depends on the case company's consent.
 
 ## Design decisions the code enforces
 
-**Origin-safe information set.** The machine-learning models are annual vintages, and the
-vintage is chosen from the *forecast origin*, never from the target month. A model fitted
+**Origin-safe information set, checked row by row.** The machine-learning models are
+annual vintages, and the vintage is chosen from the *forecast origin*, never from the
+target month. Every forecast row carries `vintage_year`, `training_end` and
+`feature_max_date`, and `test_leakage.py` asserts on each row that both dates precede the
+issue date and that all horizons from one origin share one vintage. A model fitted
 on data through 31 December of year Y serves every origin in year Y+1. Choosing by target
 year would let a September 2023 origin forecasting January 2024 use a model trained to the
 end of December 2023 — information that did not exist at the origin. `03_ml_models.py`
 asserts the property and `test_leakage.py` re-checks it from the outside.
 
-**Observable evaluation horizon.** Reviews fall on odd months and the protection interval
-is five months, so with demand recorded to December 2024 the last review whose whole
-interval is observed is July 2024. The primary window is therefore January–November 2024,
-in which every ordering decision has an observed consequence. The calendar year to
-December, and terminal holding charges of 2.5 and 5 months on ending stock, are reported
-as sensitivities rather than as the headline.
+**Separate decision and outcome windows.** Reviews fall on odd months and the protection
+interval is five months, so with demand recorded to December 2024 the last review whose
+whole interval is observed is July 2024. The primary configuration therefore places no
+order after the July 2024 review (`simcore.LAST_DECISION`) and counts cost and service
+from January to November 2024 (`simcore.EVAL_START` to `EVAL_END`). Every judged decision
+has a fully observed consequence and no counted consequence comes from an unjudged
+decision. The calendar year to December, and terminal holding charges of 2.5 and 5 months
+on the stock standing at the end, are sensitivities rather than the headline.
 
-**Matched achieved service.** A common buffer multiplier does not deliver a common
-achieved service, because the calibrating σ is a root-mean-square that absorbs bias and
-intermittent errors are not normal. `06_service_frontier.py` sweeps the multiplier from 0
-to 4 for every method and charges each one the cost of its cheapest configuration that
-reaches a given achieved aggregate fill rate. That is the comparison the paper's cost
-claims rest on; the common-target comparison is reported beside it for continuity.
+**A common service requirement, not exact matching.** A common buffer multiplier does not
+deliver a common achieved service, because the calibrating σ is a root-mean-square that
+absorbs bias and intermittent errors are not normal. `06_service_frontier.py` sweeps the
+multiplier from 0 to 4 for every method and charges each one the cost of its cheapest
+configuration reaching *at least* a given achieved aggregate fill. That requirement is a
+floor, not an exact match: the selected configurations land above it by differing
+margins, so the achieved fill and cycle service of every selected configuration are
+reported beside the cost, and a variant that interpolates cost at exactly the required
+fill is reported as a robustness check.
 
 **Uncertainty that says what it means.** `07_bootstrap.py` resamples demand units with
 replacement, keeping each unit's whole time path. The sixteen units are the operating
@@ -113,31 +124,38 @@ was specified.
 | `11_alpha_sensitivity.py` | Varies the smoothing constant of Croston, SBA, and TSB from 0.05 to 0.30 |
 | `12_refit_frequency.py` | Refits the ML models at every origin on all data available at that origin |
 | `13_refit_eval.py` | Compares annual vintages with per-origin refitting on the same policy |
-| `test_leakage.py` | Information-set checks on the generated forecast frame |
-| `smoke_test.py` | Fast CI check: script inventory, imports, cross-references, vintage rule, one simulated unit |
+| `test_leakage.py` | Row-level information-set audit of the forecast provenance stamps |
+| `smoke_test.py` | Fast CI check: script inventory, imports, cross-references, real/synthetic namespace separation, vintage rule, one simulated unit |
 
 ## Result files (real data)
 
-These CSVs sit at the repository root and are the ones the paper reports. They are shipped as computed from the confidential data; `run_all.py` overwrites nothing here.
+These are the aggregate outputs computed from the confidential data and reported in the
+paper. `MANIFEST.md` records their SHA-256 hashes, the scripts and command that produced
+them, the environment, and the decision and outcome windows.
 
 | File | Content |
 |---|---|
-| `results_table1_accuracy.csv` | Median accuracy per method across the sixteen valid units (Table 1) |
-| `results_table2_cost_sweep.csv` | Cost index at a common target by backorder-to-holding ratio (Table 2) |
-| `results_table3_matched_service.csv` | Cost index at matched achieved fill (Table 3) |
-| `results_table4_current_policy.csv` | Fixed mark-up versus error-calibrated buffer (Table 4) |
-| `results_segment_index.csv` | Cost index by SBC demand segment (Figure 5) |
-| `results_alignment.csv` | Rank correlation between accuracy and simulated cost (Figure 6) |
-| `service_frontier.csv` | The whole buffer-multiplier sweep behind Figure 4 |
-| `bootstrap_intervals.csv` | Bootstrap intervals on both bases |
-| `error_decomposition.csv` | Bias, standard deviation, and RMS of protection-interval errors |
-| `seed_variability.csv`, `alpha_sensitivity.csv`, `refit_frequency.csv` | The three sensitivity studies |
-| `sim_results_audit.csv` | The full simulation grid underlying everything above |
+| `realcase_table1_accuracy.csv` | Median accuracy per method across the sixteen valid units (Table 1) |
+| `realcase_table2_cost_sweep.csv` | Cost index at a common target by backorder-to-holding ratio (Table 2) |
+| `realcase_table3_service_requirement.csv` | Cost, achieved fill, achieved cycle service and z at four service requirements, plus the exact-match interpolation (Table 3) |
+| `realcase_table4_current_policy.csv` | Fixed mark-up versus error-calibrated buffer (Table 4) |
+| `realcase_segment_index.csv` | Cost index by SBC demand segment (Figure 5) |
+| `realcase_alignment.csv` | Rank correlation between accuracy and simulated cost (Figure 6) |
+| `realcase_service_frontier.csv` | The whole buffer-multiplier sweep behind Figure 4 |
+| `realcase_bootstrap_intervals.csv` | Bootstrap intervals on both bases |
+| `realcase_error_decomposition.csv` | Bias, standard deviation and RMS of protection-interval errors |
+| `realcase_seed_variability.csv`, `realcase_alpha_sensitivity.csv`, `realcase_refit_frequency.csv` | The three sensitivity studies |
+| `realcase_simulation_grid.csv` | The full simulation grid underlying everything above |
 
 Two of the eighteen demand units record no demand at all and are excluded from every
 aggregation, so the reported results cover sixteen units. Four further units record no
-demand inside the evaluation window; they contribute cost but not service, and the
-aggregate fill rate is a served-over-demanded ratio that handles them correctly.
+demand inside the outcome window; they contribute cost but not service, and the aggregate
+fill rate is a served-over-demanded ratio that handles them correctly.
+
+**What an independent party can and cannot verify.** The code path, the internal
+consistency of these tables, and every design rule above can be checked from this
+repository. Regenerating the numbers requires the confidential transaction file and
+therefore the data owner. That boundary is stated deliberately, here and in the paper.
 
 ## Citation
 

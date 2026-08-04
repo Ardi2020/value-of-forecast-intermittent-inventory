@@ -8,9 +8,22 @@ Policy: periodic review every R = 2 months, lead time L = 3 months, protection i
 L + R = 5 months, order-up-to level S = sum of the five-month forecast + buffer, order
 quantity rounded up to the shipping lot, unmet demand backordered.
 
-Evaluation window: the primary window ends in NOVEMBER 2024 because reviews fall on odd
-months and July 2024 is the last review whose whole protection interval (Jul-Nov) is
-observed in data that ends in December 2024.
+Two windows, deliberately separate (R3-B-15):
+
+  DECISION window  reviews up to and including LAST_DECISION = July 2024. July is the
+                   last review whose whole five-month protection interval is observed in
+                   data ending December 2024, so every ordering decision evaluated here
+                   has a fully observed consequence. Later reviews are not executed in
+                   the primary configuration; `last_decision=None` re-enables them.
+
+  OUTCOME window   January to November 2024, the months over which cost and service are
+                   accumulated. November is where the July decision's protection interval
+                   closes.
+
+The two are reported separately because they answer different questions: the decision
+window defines which choices are being judged, the outcome window defines over what
+period their consequences are counted. Ending on-hand and pipeline at the close of the
+outcome window are reported explicitly and charged in the terminal sensitivity.
 """
 import os
 import numpy as np
@@ -21,9 +34,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 L, R = 3, 2
 Z = {0.90: 1.2816, 0.95: 1.6449, 0.98: 2.0537}
 EVAL_START = pd.Timestamp('2024-01-01')
-EVAL_END = pd.Timestamp('2024-11-01')            # primary, complete-horizon
+EVAL_END = pd.Timestamp('2024-11-01')            # primary outcome window
 EVAL_END_CALENDAR = pd.Timestamp('2024-12-01')   # sensitivity
-LAST_FULL_REVIEW = pd.Timestamp('2024-07-01')
+LAST_DECISION = pd.Timestamp('2024-07-01')       # last fully observable review
+LAST_FULL_REVIEW = LAST_DECISION                 # backwards-compatible alias
 
 
 def load(fc_name='forecasts.parquet'):
@@ -65,13 +79,15 @@ def lot_round(q, unit):
 
 
 def simulate(panel, fc, fsum, months, reviews, u, mod, *, z=None, sl=0.95, ratio=10,
-             lots=True, markup=None, term_k=0.0, eval_end=EVAL_END):
+             lots=True, markup=None, term_k=0.0, eval_end=EVAL_END,
+             last_decision=LAST_DECISION):
     """One unit under one method.
 
-    z         explicit buffer multiplier; overrides sl when given (service frontier)
-    markup    fixed fraction of the five-month forecast instead of an error-calibrated
-              buffer, i.e. the company's current rule
-    term_k    holding charge, in months, on ending on-hand plus pipeline
+    z              explicit buffer multiplier; overrides sl when given (service frontier)
+    markup         fixed fraction of the five-month forecast instead of an error-calibrated
+                   buffer, i.e. the company's current rule
+    term_k         holding charge, in months, on ending on-hand plus pipeline
+    last_decision  no order is placed at a review after this month; None runs every review
     """
     zval = Z[sl] if z is None else z
     fu = fc[(fc.Unit == u) & (fc.Model == mod)].set_index(['Origin', 'Month'])['Forecast']
@@ -88,7 +104,7 @@ def simulate(panel, fc, fsum, months, reviews, u, mod, *, z=None, sl=0.95, ratio
                 f5 = panel[u].mean() * 5
             buf = markup * f5 if markup is not None else zval * sigma_at(fsum, panel, u, mod, m)
             on_hand = max(0.0, f5 + buf) + pipeline.pop(m, 0.0)
-        if m in reviews:
+        if m in reviews and (last_decision is None or m <= last_decision):
             if cycle_flags or m != reviews[0]:
                 cycle_flags.append(0 if cyc_short else 1)
             cyc_short = False
@@ -130,7 +146,9 @@ def simulate(panel, fc, fsum, months, reviews, u, mod, *, z=None, sl=0.95, ratio
     cost = ev.end_oh.sum() * 1.0 + ev.end_bl.sum() * ratio + terminal
     return {'Unit': u, 'Model': mod, 'SL': sl, 'z': zval, 'ratio': ratio, 'lots': lots,
             'markup': -1 if markup is None else markup, 'term_k': term_k,
-            'eval_end': str(eval_end.date()), 'fill_rate': fill, 'cycle_service': css,
+            'eval_end': str(eval_end.date()),
+            'last_decision': 'none' if last_decision is None else str(last_decision.date()),
+            'fill_rate': fill, 'cycle_service': css,
             'avg_oh': ev.end_oh.mean(), 'avg_bl': ev.end_bl.mean(), 'total_cost': cost,
             'demand_2024': D, 'end_oh': ev.end_oh.iloc[-1] if len(ev) else 0.0,
             'end_pipe': ev['pipe'].iloc[-1] if len(ev) else 0.0}

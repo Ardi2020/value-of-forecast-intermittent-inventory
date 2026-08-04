@@ -1,50 +1,80 @@
-"""Automated checks that no forecast uses information dated at or after its origin.
+"""Row-level information-set audit of the released forecast frame.
 
-Run directly (`python test_leakage.py`) or under pytest. 03_ml_models.py also asserts the
-vintage property internally so that a leaking configuration cannot silently produce
-forecasts; this file re-checks the property from the outside, on the forecast frame that
-the rest of the pipeline consumes.
+Round 3 (R3-M-19) noted that a hard-coded rule check is not the same as tracing what each
+forecast was actually built from. `03_ml_models.py` therefore stamps every machine-learning
+forecast row with the vintage it came from, the last date in that vintage's training data,
+and the most recent feature date used for that target month. This file audits those stamps.
+
+Run directly (`python test_leakage.py`) or under pytest.
 """
 import os
 
 import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-VINTAGE_CUTOFF = {2021: pd.Timestamp('2021-12-01'),
-                  2022: pd.Timestamp('2022-12-01'),
-                  2023: pd.Timestamp('2023-12-01')}
+ML = ['rf', 'xgb', 'hybrid']
 
 
-def vintage_for(origin):
-    """The rule used by 03_ml_models.py: the last completed annual vintage at the origin."""
-    return min(max(origin.year - 1, 2021), 2023)
-
-
-def test_vintage_precedes_origin():
+def _frame():
     fc = pd.read_parquet(os.path.join(HERE, 'forecasts.parquet'))
-    origins = sorted(pd.to_datetime(fc.Origin).unique())
-    bad = [(o, vintage_for(pd.Timestamp(o))) for o in origins
-           if VINTAGE_CUTOFF[vintage_for(pd.Timestamp(o))] >= pd.Timestamp(o)]
-    assert not bad, f'vintage trained on data dated at or after the origin: {bad[:5]}'
+    for c in ('Origin', 'Month', 'training_end', 'feature_max_date'):
+        if c in fc.columns:
+            fc[c] = pd.to_datetime(fc[c])
+    return fc
 
 
-def test_horizons_share_one_information_set():
-    """All five horizons issued at one origin must come from the same vintage."""
-    fc = pd.read_parquet(os.path.join(HERE, 'forecasts.parquet'))
-    ml = fc[fc.Model.isin(['rf', 'xgb', 'hybrid'])]
-    for o, g in ml.groupby('Origin'):
-        assert len({vintage_for(pd.Timestamp(o))}) == 1
-        assert set(g.h.unique()) <= {0, 1, 2, 3, 4}
+def test_provenance_columns_present():
+    fc = _frame()
+    for c in ('vintage_year', 'training_end', 'feature_max_date'):
+        assert c in fc.columns, f'forecast frame has no {c} column'
+    ml = fc[fc.Model.isin(ML)]
+    assert ml.training_end.notna().all(), 'machine-learning rows without a training_end'
+    assert ml.feature_max_date.notna().all(), 'machine-learning rows without a feature_max_date'
 
 
-def test_forecast_targets_start_at_the_origin():
-    fc = pd.read_parquet(os.path.join(HERE, 'forecasts.parquet'))
-    off = fc[pd.to_datetime(fc.Month) < pd.to_datetime(fc.Origin)]
+def test_training_data_precedes_every_origin():
+    ml = _frame()
+    ml = ml[ml.Model.isin(ML)]
+    bad = ml[ml.training_end >= ml.Origin]
+    assert bad.empty, (f'{len(bad)} rows trained on data dated at or after their origin, '
+                       f'first: {bad.iloc[0].to_dict() if len(bad) else None}')
+
+
+def test_features_precede_every_origin():
+    ml = _frame()
+    ml = ml[ml.Model.isin(ML)]
+    bad = ml[ml.feature_max_date >= ml.Origin]
+    assert bad.empty, f'{len(bad)} rows use a feature dated at or after their origin'
+
+
+def test_one_information_set_per_origin():
+    """All horizons issued at one origin must come from a single vintage."""
+    ml = _frame()
+    ml = ml[ml.Model.isin(ML)]
+    mixed = ml.groupby('Origin').vintage_year.nunique()
+    assert (mixed == 1).all(), f'origins drawing on more than one vintage: {mixed[mixed > 1].index.tolist()}'
+
+
+def test_horizons_are_the_protection_interval():
+    ml = _frame()
+    ml = ml[ml.Model.isin(ML)]
+    assert set(ml.h.unique()) <= {0, 1, 2, 3, 4}, 'unexpected horizon outside 0..4'
+    off = ml[ml.Month < ml.Origin]
     assert off.empty, f'{len(off)} rows forecast a month earlier than their origin'
 
 
+def test_vintage_matches_the_origin_rule():
+    """The stamped vintage must be the last completed annual vintage at the origin."""
+    ml = _frame()
+    ml = ml[ml.Model.isin(ML)]
+    expected = ml.Origin.dt.year.sub(1).clip(2021, 2023)
+    mismatch = ml[ml.vintage_year.astype(int) != expected]
+    assert mismatch.empty, f'{len(mismatch)} rows carry a vintage other than the origin rule'
+
+
 if __name__ == '__main__':
-    test_vintage_precedes_origin()
-    test_horizons_share_one_information_set()
-    test_forecast_targets_start_at_the_origin()
-    print('all leakage checks passed')
+    for name, fn in sorted(globals().items()):
+        if name.startswith('test_'):
+            fn()
+            print('ok:', name)
+    print('\nall row-level leakage checks passed')

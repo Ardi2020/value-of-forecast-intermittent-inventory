@@ -27,6 +27,15 @@ authors:
       Department of Industrial Engineering, Faculty of Engineering, Universitas
       Andalas, Padang, Indonesia
 license: MIT
+version: 3.0.0
+doi: 10.5281/zenodo.21783340
+repository-code: https://github.com/Ardi2020/value-of-forecast-intermittent-inventory
+url: https://github.com/Ardi2020/value-of-forecast-intermittent-inventory
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.21783340
+    description: Concept DOI, always resolves to the latest version
+date-released: '2026-08-05'
 keywords:
   - intermittent demand
   - demand forecasting
