@@ -43,6 +43,11 @@ python 04_simulate.py               # sequential (R,S) simulation over the cost 
 python 05_analyze.py                # accuracy metrics, intermittency profile, alignment
 python 06_analyze_segments.py       # SBC segment analysis and sensitivity tables
 python 07_figures.py                # publication figures
+python 08_audit_reruns.py           # current-policy baseline, cycle service, terminal accounting
+python 09_seed_study.py             # random-seed variability of the ML configurations
+python 10_alpha_sensitivity.py      # smoothing-constant sensitivity of Croston / SBA / TSB
+python 11_refit_frequency.py        # refit the ML models at every origin instead of yearly
+python 12_refit_eval.py             # compare the two retraining schedules on cost and accuracy
 ```
 
 `01_build_units.py` maps the company's raw transaction file to the 18 analysis units and
@@ -63,16 +68,32 @@ every origin), typically 5–15 minutes; the remaining steps take under a minute
 | `04_simulate.py` | `(R,S)` simulation: order-up-to levels, lot rounding, backorders, cost and service grid |
 | `05_analyze.py` | MASE, RMSSE, adjusted MAPE, SBC intermittency profile, accuracy-to-cost alignment |
 | `06_analyze_segments.py` | Cost index by SBC segment, sensitivity to cost ratio and service level |
-| `07_figures.py` | Figures 1–5 of the paper at 300 dpi |
+| `07_figures.py` | Figures 1–5 of the paper at 600 dpi |
+| `08_audit_reruns.py` | Simulation of the company's current fixed-mark-up policy, achieved cycle service, forecast-error decomposition, terminal-inventory accounting, exclusion of all-zero units |
+| `09_seed_study.py` | Repeats the ML configurations under alternative random seeds |
+| `10_alpha_sensitivity.py` | Varies the smoothing constant of Croston, SBA, and TSB from 0.05 to 0.30 |
+| `11_refit_frequency.py` | Refits the ML models at every forecast origin on all data available at that origin |
+| `12_refit_eval.py` | Evaluates yearly vintages against per-origin refitting on the same policy |
 
 ## Result files
 
 | File | Content |
 |---|---|
-| `results_table1_accuracy.csv` | Median accuracy per method across the 18 units (Table 1) |
+| `results_table1_accuracy.csv` | Median accuracy per method across the sixteen valid units (Table 1) |
 | `results_table2_cost_sweep.csv` | Cost index by backorder-to-holding ratio (Table 2) |
+| `results_current_policy.csv` | Cost, fill rate, and cycle service of the company's fixed-mark-up policy (Table 3) |
 | `results_segment_index.csv` | Cost index by SBC demand segment (Figure 4) |
 | `results_alignment.csv` | Rank correlation between accuracy and simulated cost (Figure 5) |
+| `results_terminal_sensitivity.csv` | Cost index under the terminal-penalty and observable-window treatments |
+| `alignment_audit.csv` | Per-unit rank correlations with average ranks for ties |
+| `error_decomposition.csv` | Bias, standard deviation, and RMS of protection-interval forecast errors |
+| `seed_variability.csv` | Cost index of the ML configurations under alternative random seeds |
+| `alpha_sensitivity.csv` | Cost index of Croston, SBA, and TSB across smoothing constants |
+| `refit_frequency.csv` | Cost and accuracy under yearly versus per-origin ML retraining |
+| `sim_results_audit.csv` | Full simulation grid underlying the tables above |
+
+Two of the eighteen demand units record no demand at all in the evaluation window and are
+excluded from every aggregation; the reported results therefore cover sixteen units.
 
 ## Citation
 
