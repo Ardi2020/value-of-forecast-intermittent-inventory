@@ -66,7 +66,11 @@ for t in ORIGINS:
         m = t + pd.DateOffset(months=j)
         if m > MONTHS[-1]: continue
         minlag = 4 if j <= 3 else 5
-        vy = min(max(m.year - 1, 2021), 2023)
+        # B-02 / R2-B-09: the vintage must be chosen from the ORIGIN, not from the
+        # target month. A model trained through 31 Dec of year Y is only available to
+        # origins in year Y+1 onwards; keying on m.year let a September 2023 origin
+        # forecasting January 2024 use a model trained to the end of December 2023.
+        vy = min(max(t.year - 1, 2021), 2023)
         L = LONGS[minlag]
         rr = L[L.Date == m]
         if rr.empty: continue
@@ -88,6 +92,18 @@ ml = pd.DataFrame(rows, columns=['Unit', 'Origin', 'Month', 'h', 'Model', 'Forec
 act = panel.stack().rename('Actual').reset_index()
 act.columns = ['Month', 'Unit', 'Actual']
 ml = ml.merge(act, on=['Unit', 'Month'], how='left')
+
+# ---- leakage test: no training observation may be dated at or after the origin ----
+VCUT = {2021: pd.Timestamp('2021-12-01'), 2022: pd.Timestamp('2022-12-01'),
+        2023: pd.Timestamp('2023-12-01')}
+bad = 0
+for t in ORIGINS:
+    vy = min(max(t.year - 1, 2021), 2023)
+    if VCUT[vy] >= t:
+        bad += 1
+        print('LEAK: origin', t.date(), 'uses vintage', vy, 'cut', VCUT[vy].date())
+assert bad == 0, f'{bad} origins use a vintage trained on data dated at or after the origin'
+print('leakage test passed: max(training date) < origin for all', len(ORIGINS), 'origins')
 old = pd.read_parquet(os.path.join(HERE, 'forecasts.parquet'))
 keep = old[~old.Model.isin(['rf', 'xgb', 'hybrid'])]
 out = pd.concat([keep, ml], ignore_index=True)

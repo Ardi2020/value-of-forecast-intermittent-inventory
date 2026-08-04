@@ -1,0 +1,5 @@
+buffer_rule,cost_index,agg_fill_rate,mean_cycle_service
+Fixed mark-up 10%,146.5,0.672,0.646
+Fixed mark-up 20%,125.7,0.747,0.76
+Fixed mark-up 30%,100.2,0.837,0.781
+"Error-calibrated, 95% target",100.0,0.988,0.979

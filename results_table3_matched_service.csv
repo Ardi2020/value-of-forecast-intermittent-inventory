@@ -1,0 +1,41 @@
+matched_fill,Model,cost_index,z_used,feasible
+0.95,ARIMA,133.1,0.5,True
+0.95,Croston,170.1,0.7,True
+0.95,Hybrid cls-reg,165.7,0.6,True
+0.95,Partner annual,100.0,1.1,True
+0.95,Naive,288.7,0.5,True
+0.95,Random Forest,130.1,0.3,True
+0.95,SBA,152.3,0.6,True
+0.95,SES,122.3,0.7,True
+0.95,TSB,123.7,0.4,True
+0.95,XGBoost (Tweedie),115.7,1.5,True
+0.97,ARIMA,134.9,0.7,True
+0.97,Croston,158.1,0.7,True
+0.97,Hybrid cls-reg,166.0,0.8,True
+0.97,Partner annual,100.0,1.3,True
+0.97,Naive,278.8,0.6,True
+0.97,Random Forest,127.0,0.4,True
+0.97,SBA,156.0,0.8,True
+0.97,SES,113.6,0.7,True
+0.97,TSB,122.5,0.6,True
+0.97,XGBoost (Tweedie),107.5,1.5,True
+0.98,ARIMA,128.3,0.8,True
+0.98,Croston,149.1,0.8,True
+0.98,Hybrid cls-reg,165.2,1.0,True
+0.98,Partner annual,100.0,1.5,True
+0.98,Naive,250.3,0.6,True
+0.98,Random Forest,124.7,0.5,True
+0.98,SBA,152.4,1.0,True
+0.98,SES,109.4,0.8,True
+0.98,TSB,124.5,0.8,True
+0.98,XGBoost (Tweedie),106.4,1.6,True
+0.99,ARIMA,124.5,1.0,True
+0.99,Croston,142.7,1.0,True
+0.99,Hybrid cls-reg,187.6,1.5,True
+0.99,Partner annual,100.0,1.8,True
+0.99,Naive,268.6,1.0,True
+0.99,Random Forest,152.1,1.0,True
+0.99,SBA,139.3,1.1,True
+0.99,SES,121.1,1.2,True
+0.99,TSB,137.7,1.2,True
+0.99,XGBoost (Tweedie),109.6,1.8,True

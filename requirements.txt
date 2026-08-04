@@ -1,8 +1,11 @@
-numpy>=2.4.4
-pandas>=3.0.2
-scikit-learn>=1.8.0
-xgboost>=3.2.0
-statsmodels>=0.14.6
-scipy>=1.17.1
-matplotlib>=3.10.9
-pyarrow>=25.0.0
+# Exact versions used to produce every number and figure in the paper.
+# The pipeline is deterministic under these versions; other versions may differ in
+# tie-breaking inside the tree ensembles.
+numpy==2.4.4
+pandas==3.0.2
+scikit-learn==1.8.0
+xgboost==3.2.0
+statsmodels==0.14.6
+scipy==1.17.1
+matplotlib==3.10.9
+pyarrow==25.0.0
