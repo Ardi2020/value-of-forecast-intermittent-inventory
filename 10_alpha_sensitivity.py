@@ -3,6 +3,7 @@ import pandas as pd, numpy as np, os, json, importlib.util
 HERE = os.path.dirname(os.path.abspath(__file__))
 panel = pd.read_csv(os.path.join(HERE,'unit_demand_monthly.csv'), index_col=0, parse_dates=True)
 fc0 = pd.read_parquet(os.path.join(HERE,'forecasts.parquet'))
+fc0.to_parquet(os.path.join(HERE,'_fc_alpha_backup.parquet'))  # baseline, restored at the end
 MONTHS=list(panel.index); ORIGINS=[m for m in MONTHS if m>=pd.Timestamp('2022-01-01')]
 UNITS=[u for u in panel.columns if panel[u].sum()>0]
 
@@ -43,6 +44,8 @@ for a in (0.05,0.10,0.20,0.30):
     for m in ('croston','sba','tsb'): out.append({'alpha':a,'Model':m,'cost_index':round(idx[m],1)})
     print('alpha',a,{m:round(idx[m],1) for m in ('croston','sba','tsb')},flush=True)
 pd.DataFrame(out).to_csv(os.path.join(HERE,'alpha_sensitivity.csv'),index=False)
-# restore alpha = 0.1 forecasts
-os.system(f'cd {HERE} && python3 audit_rerun.py > /dev/null 2>&1')
+# restore the baseline (alpha = 0.1) forecasts AND the downstream result tables
+fc0.to_parquet(os.path.join(HERE, 'forecasts.parquet'))
+os.remove(os.path.join(HERE, '_fc_alpha_backup.parquet'))
+os.system(f'cd {HERE} && python3 08_audit_reruns.py > /dev/null 2>&1')
 print('done')

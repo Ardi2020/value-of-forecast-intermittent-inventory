@@ -19,4 +19,8 @@ for seed in (42, 7, 2026):
     shutil.copy(os.path.join(HERE,'_fc_backup.parquet'), os.path.join(HERE,'forecasts.parquet'))
     os.remove(tmp)
 pd.DataFrame(out).to_csv(os.path.join(HERE,'seed_variability.csv'), index=False)
+# the loop restores forecasts.parquet after each seed; rerun the audit once more so that
+# sim_results_audit.csv and everything derived from it describe the baseline seed again
+os.remove(os.path.join(HERE, '_fc_backup.parquet'))
+subprocess.run(['python3', os.path.join(HERE, '08_audit_reruns.py')], cwd=HERE, capture_output=True)
 print('done')
