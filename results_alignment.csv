@@ -1,0 +1,5 @@
+metric,median_rho,volume_weighted_mean_rho
+MASE,0.57,0.089
+MASE5,0.455,-0.122
+RMSSE,0.582,0.018
+customMAPE,0.17,0.039

@@ -1,0 +1,40 @@
+cff-version: 1.2.0
+title: >-
+  From forecast accuracy to inventory performance: code and synthetic data
+message: >-
+  If you use this software, please cite both the software and the associated
+  article.
+type: software
+authors:
+  - given-names: Asmuliardi
+    family-names: Muluk
+    email: asmuliardi@eng.unand.ac.id
+    orcid: https://orcid.org/0009-0008-9564-4867
+    affiliation: >-
+      Department of Industrial Engineering, Faculty of Engineering, Universitas
+      Andalas, Padang, Indonesia
+  - given-names: Taufik
+    family-names: Nazir
+    email: taufik@eng.unand.ac.id
+    orcid: https://orcid.org/0009-0008-9138-7808
+    affiliation: >-
+      Department of Industrial Engineering, Faculty of Engineering, Universitas
+      Andalas, Padang, Indonesia
+  - given-names: Stephany Christie
+    family-names: Lase
+    orcid: https://orcid.org/0009-0008-7143-999X
+    affiliation: >-
+      Department of Industrial Engineering, Faculty of Engineering, Universitas
+      Andalas, Padang, Indonesia
+license: MIT
+keywords:
+  - intermittent demand
+  - demand forecasting
+  - inventory simulation
+  - periodic review policy
+  - machine learning
+  - forecast value
+abstract: >-
+  Code, synthetic data generator, and result tables for a simulation-based
+  assessment of the value of machine-learning demand forecasts in a
+  periodic-review (R,S) inventory policy for intermittent export demand.
