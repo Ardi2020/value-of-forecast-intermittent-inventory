@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*.parquet
+figures/
+unit_demand_monthly.csv
+mitra_annual.json
+exog_monthly.csv
+export_records.csv
+partner_annual.json
