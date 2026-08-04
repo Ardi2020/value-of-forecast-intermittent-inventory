@@ -19,9 +19,15 @@ service**, not on accuracy alone and not at a common service target.
 ```bash
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
+python smoke_test.py       # ~30 s: imports, dependencies, vintage rule, simulator
 python run_all.py          # add --quick to skip the three slow sensitivity studies
 python test_leakage.py     # information-set checks, also run inside 03_ml_models.py
 ```
+
+`smoke_test.py` is what CI runs on every push (`.github/workflows/smoke.yml`). It checks
+the things that actually broke in earlier revisions: a script referencing a file that is
+not in the repository, a policy-logic import error, and the origin-safety of the vintage
+rule.
 
 `run_all.py` is the only entry point you need. It deletes every generated file first,
 runs the steps in order, stops at the first step that exits non-zero **or** fails to
@@ -108,6 +114,7 @@ was specified.
 | `12_refit_frequency.py` | Refits the ML models at every origin on all data available at that origin |
 | `13_refit_eval.py` | Compares annual vintages with per-origin refitting on the same policy |
 | `test_leakage.py` | Information-set checks on the generated forecast frame |
+| `smoke_test.py` | Fast CI check: script inventory, imports, cross-references, vintage rule, one simulated unit |
 
 ## Result files (real data)
 
