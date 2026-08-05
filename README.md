@@ -19,7 +19,8 @@ requirement**, not on accuracy alone and not at a common service target.
 ```bash
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
-python smoke_test.py       # ~30 s: imports, dependencies, vintage rule, simulator
+python smoke_test.py       # ~30 s: imports, dependencies, manifest, vintage rule, simulator
+python verify_manifest.py  # recompute every released checksum against MANIFEST.md
 python run_all.py          # add --quick to skip the three slow sensitivity studies
 python test_leakage.py     # information-set checks, also run inside 03_ml_models.py
 ```
@@ -49,7 +50,8 @@ Two different things are provided, and they should not be confused:
   data. Every table and figure reported in the paper is derived from these files. They
   contain normalised cost indices, accuracy metrics, achieved service, and rank
   correlations only; no absolute demand quantity appears in them. Their SHA-256 hashes
-  and provenance are recorded in `MANIFEST.md`. **No pipeline step writes, reads or
+  and provenance are recorded in `MANIFEST.md`, which `verify_manifest.py` re-checks in
+  CI on every push, and whose provenance is attested in `SIGNOFF.md`. **No pipeline step writes, reads or
   deletes anything in this namespace**, so a synthetic run cannot overwrite them or be
   mistaken for them; `smoke_test.py` asserts that separation on every push.
 * **The pipeline — synthetic.** `00_make_synthetic_data.py` generates a panel with the
@@ -125,6 +127,7 @@ was specified.
 | `12_refit_frequency.py` | Refits the ML models at every origin on all data available at that origin |
 | `13_refit_eval.py` | Compares annual vintages with per-origin refitting on the same policy |
 | `test_leakage.py` | Row-level information-set audit of the forecast provenance stamps |
+| `verify_manifest.py` | Recomputes every released checksum and fails on drift |
 | `smoke_test.py` | Fast CI check: script inventory, imports, cross-references, real/synthetic namespace separation, vintage rule, one simulated unit |
 
 ## Result files (real data)
@@ -154,8 +157,10 @@ fill rate is a served-over-demanded ratio that handles them correctly.
 
 **What an independent party can and cannot verify.** The code path, the internal
 consistency of these tables, and every design rule above can be checked from this
-repository. Regenerating the numbers requires the confidential transaction file and
-therefore the data owner. That boundary is stated deliberately, here and in the paper.
+repository, and `verify_manifest.py` confirms that the released files are the ones the
+manifest describes. Regenerating the values requires the confidential transaction file and
+therefore the data owner; `SIGNOFF.md` is where that attestation is recorded. The boundary
+is stated deliberately, here and in the paper.
 
 ## Citation
 

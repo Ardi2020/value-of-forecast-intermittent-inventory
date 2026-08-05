@@ -21,7 +21,7 @@ SCRIPTS = ['00_make_synthetic_data.py', '02_forecasts.py', '03_ml_models.py',
            '04_simulate.py', '05_alignment.py', '06_service_frontier.py',
            '07_bootstrap.py', '08_figures.py', '09_report_numbers.py',
            '10_seed_study.py', '11_alpha_sensitivity.py', '12_refit_frequency.py',
-           '13_refit_eval.py', 'run_all.py', 'test_leakage.py']
+           '13_refit_eval.py', 'run_all.py', 'test_leakage.py', 'verify_manifest.py']
 
 
 def check_syntax():
@@ -91,6 +91,14 @@ def check_namespace_separation():
     print(f'ok: {len(released)} real-case files are outside the pipeline namespace')
 
 
+def check_manifest():
+    """R4-M-22: the manifest must describe the files that are actually released."""
+    r = subprocess.run([sys.executable, 'verify_manifest.py'], cwd=HERE,
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout + r.stderr
+    print('ok:', r.stdout.strip().replace('ok: ', ''))
+
+
 def check_vintage_rule():
     """The rule itself, without needing the full forecast frame."""
     cutoff = {2021: pd.Timestamp('2021-12-01'), 2022: pd.Timestamp('2022-12-01'),
@@ -107,6 +115,7 @@ if __name__ == '__main__':
     check_imports()
     check_declared_dependencies()
     check_namespace_separation()
+    check_manifest()
     check_vintage_rule()
     check_fixture_and_simulator()
     print('\nsmoke test passed')
