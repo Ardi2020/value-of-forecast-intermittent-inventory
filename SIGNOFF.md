@@ -14,7 +14,7 @@ their values. This file records the attestation that closes that gap.
 
 | Field | Value |
 |---|---|
-| Release / tag | `v3.0.2` |
+| Release / tag | ............................ (the tag verified by the signer; `v3.0.3` or later) |
 | Concept DOI | 10.5281/zenodo.21783340 |
 | Files attested | the 14 `realcase_*` files listed in `MANIFEST.md` |
 | Decision window | reviews up to and including 2024-07-01 |
